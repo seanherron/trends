@@ -2,11 +2,13 @@ import json
 import urllib2
 import os
 import csv
-from datetime import date, timedelta as td
-import datetime
+import calendar
 
 print "Provide the API Endpoint"
 endpoint = raw_input("Endpoint: ")
+
+print "Provide an API Key"
+api_key = raw_input("API Key: ")
 
 print "Please Enter the Medicinal Products you wish to search for, comma seperated"
 medicinalproducts_raw = raw_input("Products: ")
@@ -31,26 +33,22 @@ filename = raw_input("Please provide an export filename (eg. mytest.csv): ")
 
 # Now we're going to get a list of search dates
 
-d1 = date(2004, 1, 1)
-d2 = date(2013, 12, 31)
-delta = d2 - d1
+years = range(2004, 2014)
+months = range(1, 13)
 
 with open(filename, 'wb') as csvfile:
   countwriter = csv.writer(csvfile)
-  for i in range (delta.days + 1):
-    day = datetime.datetime.strftime(d1 + td(days=i), "%Y%m%d")
-    try:
-      print day
-      print medicinalproducts
-      print reactions
-      print seriousness
-      url = '%s?api_key=nuPx4MMK4OQVVyVzSC7Pf8ah9Or30idKCuVfmUAy&search=patient.drug.medicinalproduct:(%s)+AND+patient.reaction.reactionmeddrapt:(%s)+AND+receivedate:%s%s' % (endpoint, medicinalproducts, reactions, day, seriousness)
-      print url
-      response = urllib2.urlopen(url)
-      data = json.load(response)
-      countwriter.writerow((day, data[0]['results']['total']))
-      print written
-    except:
-      print "fail"
-      pass
-    
+  for year in years:
+    for month in months:
+      startdate = "%s-%s-01" % (year, month)
+      enddate = "%s-%s-%s" % (year, month, calendar.monthrange(year, month)[1])
+      try:
+        url = '%s?api_key=%s&search=patient.drug.medicinalproduct:(%s)+AND+patient.reaction.reactionmeddrapt:(%s)+AND+receivedate:[%s+TO+%s]%s' % (endpoint, api_key, medicinalproducts, reactions, startdate, enddate, seriousness)
+        print url
+        response = urllib2.urlopen(url)
+        data = json.load(response)
+        print "%s Reports Found" % data[0]['results']['total']
+        countwriter.writerow((startdate, enddate, data[0]['results']['total']))
+      except:
+        print "No Reports Found"
+        pass
